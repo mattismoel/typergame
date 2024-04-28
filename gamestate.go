@@ -51,7 +51,11 @@ func NewGameState(srcWords words, gameDuration time.Duration, refreshRate int) (
 	return gs, nil
 }
 
-func (gs *gameState) refreshUI() error {
+func (gs gameState) secsLeft() float64 {
+	return (gs.duration - gs.elapsed).Seconds()
+}
+
+func (gs gameState) refreshUI() error {
 	clearView()
 	w, h, err := gs.tty.Size()
 	if err != nil {
@@ -63,34 +67,30 @@ Time left: %.2fs
 Written: %d
 Rate: %.2f wpm`
 
+	fmt.Printf(topBarLayout, gs.secsLeft(), gs.writtenWords, 10.0)
+
+	for range h/2 - 1 - strings.Count(topBarLayout, "\n") {
+		fmt.Println()
+	}
+
 	start := gs.pos - w/2
 	if start < 0 {
 		start = 0
 	}
 
 	end := gs.pos + w/2
-	if end > len(gs.modBytes) {
-		end = len(gs.modBytes)
+	if end > len(gs.modBytes)-1 {
+		end = len(gs.modBytes) - 1
 	}
 
-	endPartStart := gs.pos + 1
-
-	fmt.Printf(
-		topBarLayout,
-		(gs.duration - gs.elapsed).Seconds(),
-		gs.writtenWords,
-		10.0,
-	)
-
-	for range h/2 - 1 - strings.Count(topBarLayout, "\n") {
-		fmt.Println()
+	padCount := w/2 - gs.pos
+	if padCount < 0 {
+		padCount = 0
 	}
 
-	end = int(math.Min(float64(end), float64(len(gs.modBytes))))
-
-	padding := strings.Repeat(" ", int(math.Max(0.0, float64(w/2-gs.pos)-2)))
-	fmt.Printf("%s%s|%s|%s\n", padding, gs.modBytes[start:gs.pos], string(gs.modBytes[gs.pos]), gs.modBytes[endPartStart:end])
-	fmt.Printf("%*s\n", w/2, "^")
+	fmt.Printf("%s", strings.Repeat(" ", padCount))
+	fmt.Printf("%s\n", gs.modBytes[start:end])
+	fmt.Printf("%s^\n", strings.Repeat(" ", w/2))
 	return nil
 }
 
@@ -101,6 +101,7 @@ func (gs *gameState) traverse(char rune, dir int) error {
 
 	if gs.pos+dir < 0 {
 		gs.modBytes[0] = gs.srcBytes[0]
+		gs.pos = 0
 		return nil
 	}
 
