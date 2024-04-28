@@ -23,6 +23,8 @@ type gameState struct {
 	durationTicker *time.Ticker
 	refreshTicker  *time.Ticker
 
+	start time.Time
+
 	duration time.Duration
 	elapsed  time.Duration
 }
@@ -39,6 +41,7 @@ func NewGameState(srcWords words, gameDuration time.Duration, refreshRate int) (
 		durationTicker: time.NewTicker(gameDuration),
 		refreshTicker:  time.NewTicker(time.Duration(float64(1.0/float64(refreshRate)) * float64(time.Second))),
 		duration:       gameDuration,
+		start:          time.Now(),
 	}
 
 	gs.srcBytes = []byte(srcWords.String())
@@ -50,33 +53,44 @@ func NewGameState(srcWords words, gameDuration time.Duration, refreshRate int) (
 
 func (gs *gameState) refreshUI() error {
 	clearView()
-	w, _, err := gs.tty.Size()
+	w, h, err := gs.tty.Size()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf(`
-Time left: %d%*s: %d%*s: %.2f wpm
-%*s
+	topBarLayout := `
+Time left: %.2fs
+Written: %d
+Rate: %.2f wpm`
 
-%s
-%*s
-%*s`,
-		int(gs.elapsed.Seconds()),
-		w/3,
-		"Written",
-		len(gs.writtenWords),
-		w/3,
-		"Rate",
-		gs.duration.Seconds()/float64(len(gs.writtenWords)),
-		w,
-		strings.Repeat("_", w),
-		string(gs.modBytes),
-		gs.pos+1,
-		"^",
-		w,
-		strings.Repeat("_", w),
+	start := gs.pos - w/2
+	if start < 0 {
+		start = 0
+	}
+
+	end := gs.pos + w/2
+	if end > len(gs.modBytes) {
+		end = len(gs.modBytes)
+	}
+
+	endPartStart := gs.pos + 1
+
+	fmt.Printf(
+		topBarLayout,
+		(gs.duration - gs.elapsed).Seconds(),
+		gs.writtenWords,
+		10.0,
 	)
+
+	for range h/2 - 1 - strings.Count(topBarLayout, "\n") {
+		fmt.Println()
+	}
+
+	end = int(math.Min(float64(end), float64(len(gs.modBytes))))
+
+	padding := strings.Repeat(" ", int(math.Max(0.0, float64(w/2-gs.pos)-2)))
+	fmt.Printf("%s%s|%s|%s\n", padding, gs.modBytes[start:gs.pos], string(gs.modBytes[gs.pos]), gs.modBytes[endPartStart:end])
+	fmt.Printf("%*s\n", w/2, "^")
 	return nil
 }
 

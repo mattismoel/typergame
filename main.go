@@ -10,6 +10,7 @@ import (
 )
 
 var duration = 30 * time.Second
+var wordCount = 20
 
 func main() {
 	gameTicker := time.NewTicker(duration)
@@ -26,12 +27,12 @@ func main() {
 	}()
 
 	wordService := NewApiWordService()
-	words, err := wordService.Select(5)
+	words, err := wordService.Select(wordCount)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	gs, err := NewGameState(words, duration, 10)
+	gs, err := NewGameState(words, duration, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,6 +44,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			gs.elapsed = time.Now().Sub(gs.start)
 		}
 	}()
 
@@ -68,34 +70,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
-	// var i int
-	// for {
-	// 	r, err := gs.tty.ReadRune()
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	//
-	// 	clearView()
-	// 	switch r {
-	// 	case 127: // backspace
-	// 		traverse(modWordBytes, srcWordBytes, r, i, -1)
-	// 		if err != nil {
-	// 			log.Fatal(err)
-	// 		}
-	// 		i--
-	// 	default:
-	// 		err := traverse(modWordBytes, srcWordBytes, r, i, 1)
-	// 		if err != nil {
-	// 			log.Fatal(err)
-	// 		}
-	//
-	// 		i++
-	// 	}
-	// 	i = int(math.Max(0.0, float64(i)))
-	// 	i = int(math.Min(float64(i), float64(len(srcWordBytes)-1)))
-	// 	render(i, modWordBytes)
-	// }
 }
 
 func render(i int, b []byte) {
