@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/mattn/go-tty"
 )
 
@@ -27,9 +28,12 @@ type gameState struct {
 
 	duration time.Duration
 	elapsed  time.Duration
+
+	colorPrints map[string]*color.Color
 }
 
 func NewGameState(srcWords words, gameDuration time.Duration, refreshRate int) (*gameState, error) {
+	color.New()
 	tty, err := tty.Open()
 	if err != nil {
 		return nil, fmt.Errorf("could not open terminal: %v", err)
@@ -42,6 +46,11 @@ func NewGameState(srcWords words, gameDuration time.Duration, refreshRate int) (
 		refreshTicker:  time.NewTicker(time.Duration(float64(1.0/float64(refreshRate)) * float64(time.Second))),
 		duration:       gameDuration,
 		start:          time.Now(),
+		colorPrints: map[string]*color.Color{
+			"red":  color.New(color.FgRed),
+			"grey": color.New(color.FgBlack),
+			"blue": color.New(color.FgBlue),
+		},
 	}
 
 	gs.srcBytes = []byte(srcWords.String())
@@ -62,6 +71,13 @@ func (gs gameState) refreshUI() error {
 		return err
 	}
 
+	if w%2 == 0 {
+		w--
+	}
+	if h%2 == 0 {
+		h--
+	}
+
 	topBarLayout := `
 Time left: %.2fs
 Written: %d
@@ -79,8 +95,8 @@ Rate: %.2f wpm`
 	}
 
 	end := gs.pos + w/2
-	if end > len(gs.modBytes)-1 {
-		end = len(gs.modBytes) - 1
+	if end > len(gs.modBytes) {
+		end = len(gs.modBytes)
 	}
 
 	padCount := w/2 - gs.pos
@@ -88,8 +104,17 @@ Rate: %.2f wpm`
 		padCount = 0
 	}
 
+	endStart := gs.pos + 1
+	if endStart >= len(gs.modBytes)-1 {
+		endStart = len(gs.modBytes) - 1
+	}
+
 	fmt.Printf("%s", strings.Repeat(" ", padCount))
-	fmt.Printf("%s\n", gs.modBytes[start:end])
+	fmt.Printf("%s", gs.modBytes[start:gs.pos])
+	gs.colorPrints["blue"].Printf("%s", string(gs.modBytes[gs.pos]))
+	gs.colorPrints["grey"].Printf("%s\n", gs.modBytes[endStart:end])
+	// fmt.Printf("%s\n", gs.modBytes[start:end])
+	// fmt.Printf("%s\n", gs.modBytes[start:end])
 	fmt.Printf("%s^\n", strings.Repeat(" ", w/2))
 	return nil
 }
