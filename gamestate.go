@@ -19,7 +19,8 @@ type gameState struct {
 	srcBytes []byte
 	modBytes []byte
 
-	pos int
+	pos            int
+	correctnessMap map[int]bool
 
 	durationTicker *time.Ticker
 	refreshTicker  *time.Ticker
@@ -51,6 +52,7 @@ func NewGameState(srcWords words, gameDuration time.Duration, refreshRate int) (
 			"grey": color.New(color.FgBlack),
 			"blue": color.New(color.FgBlue),
 		},
+		correctnessMap: make(map[int]bool),
 	}
 
 	gs.srcBytes = []byte(srcWords.String())
@@ -105,15 +107,22 @@ Rate: %.2f wpm`
 	}
 
 	endStart := gs.pos + 1
-	if endStart >= len(gs.modBytes)-1 {
-		endStart = len(gs.modBytes) - 1
+	if endStart > len(gs.modBytes) {
+		endStart = len(gs.modBytes)
 	}
 
 	fmt.Printf("%s", strings.Repeat(" ", padCount))
-	fmt.Printf("%s", gs.modBytes[start:gs.pos])
+	for i := range gs.modBytes[start:gs.pos] {
+		if gs.correctnessMap[start+i] == false {
+			gs.colorPrints["red"].Printf("%s", string(gs.modBytes[start+i]))
+			continue
+		}
+		fmt.Printf("%s", string(gs.modBytes[start+i]))
+	}
+
+	// fmt.Printf("%s", gs.modBytes[start:gs.pos])
 	gs.colorPrints["blue"].Printf("%s", string(gs.modBytes[gs.pos]))
 	gs.colorPrints["grey"].Printf("%s\n", gs.modBytes[endStart:end])
-	// fmt.Printf("%s\n", gs.modBytes[start:end])
 	// fmt.Printf("%s\n", gs.modBytes[start:end])
 	fmt.Printf("%s^\n", strings.Repeat(" ", w/2))
 	return nil
@@ -142,6 +151,10 @@ func (gs *gameState) traverse(char rune, dir int) error {
 		gs.modBytes[gs.pos] = gs.srcBytes[gs.pos]
 		gs.modBytes[gs.pos-1] = gs.srcBytes[gs.pos-1]
 		break
+	}
+
+	if gs.modBytes[gs.pos] == gs.srcBytes[gs.pos] {
+		gs.correctnessMap[gs.pos] = true
 	}
 
 	gs.pos += dir
