@@ -9,16 +9,13 @@ import (
 	"time"
 )
 
-var duration = 30 * time.Second
-var wordCount = 20
+var duration = 60 * time.Second
+var wordCount = 100
+var gameover bool
 
 func main() {
 	gameTicker := time.NewTicker(duration)
 
-	go func() {
-		<-gameTicker.C
-		exit()
-	}()
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -38,6 +35,16 @@ func main() {
 	}
 
 	go func() {
+		<-gameTicker.C
+		gs.refreshTicker.Stop()
+		gs.resultScreen()
+		gameover = true
+		time.Sleep(1 * time.Second)
+		setCursor(true)
+		os.Exit(0)
+	}()
+
+	go func() {
 		for {
 			<-gs.refreshTicker.C
 			err := gs.refreshUI()
@@ -45,11 +52,12 @@ func main() {
 				log.Fatal(err)
 			}
 			gs.elapsed = time.Now().Sub(gs.start)
+			gs.setRate()
 		}
 	}()
 
 	setCursor(false)
-	for {
+	for !gameover {
 		r, err := gs.tty.ReadRune()
 		if err != nil {
 			log.Fatal(err)
@@ -64,7 +72,6 @@ func main() {
 			break
 		}
 
-		// gs.traverse(r, bytePos, dir)
 		err = gs.refreshUI()
 		if err != nil {
 			log.Fatal(err)

@@ -30,6 +30,7 @@ type gameState struct {
 
 	duration time.Duration
 	elapsed  time.Duration
+	rate     float64
 
 	colorPrints map[string]*color.Color
 }
@@ -67,6 +68,10 @@ func (gs gameState) secsLeft() float64 {
 	return (gs.duration - gs.elapsed).Seconds()
 }
 
+func (gs *gameState) setRate() {
+	gs.rate = float64(gs.wordCount) / float64(gs.elapsed.Seconds()) * 60.0
+}
+
 func (gs gameState) refreshUI() error {
 	clearView()
 	w, h, err := gs.tty.Size()
@@ -86,7 +91,7 @@ Time left: %.2fs
 Written: %d
 Rate: %.2f wpm`
 
-	fmt.Printf(topBarLayout, gs.secsLeft(), gs.wordCount, 10.0)
+	fmt.Printf(topBarLayout, gs.secsLeft(), gs.wordCount, gs.rate)
 
 	for range h/2 - 1 - strings.Count(topBarLayout, "\n") {
 		fmt.Println()
@@ -118,7 +123,6 @@ Rate: %.2f wpm`
 			if gs.modBytes[start+i] == ' ' {
 				gs.modBytes[start+i] = '_'
 			}
-
 			gs.colorPrints["red"].Printf("%s", string(gs.modBytes[start+i]))
 			continue
 		}
@@ -166,4 +170,9 @@ func (gs *gameState) traverse(char rune, dir int) error {
 	gs.pos += dir
 	gs.pos = int(math.Min(float64(gs.pos), float64(len(gs.srcBytes)-1)))
 	return nil
+}
+
+func (gs gameState) resultScreen() {
+	clearView()
+	fmt.Printf("Rate: %.2f wpm\n", gs.rate)
 }

@@ -18,7 +18,7 @@ func NewApiWordService() *apiWordService {
 }
 
 func (s apiWordService) Select(count int) (words, error) {
-	url := fmt.Sprintf("https://random-word-api.herokuapp.com/word?number=%d", count)
+	url := fmt.Sprintf("https://random-word-api.herokuapp.com/word?length=5&number=%d", count)
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
