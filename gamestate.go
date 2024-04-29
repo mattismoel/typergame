@@ -13,8 +13,9 @@ import (
 type gameState struct {
 	tty *tty.TTY
 
-	srcWords     words
-	writtenWords words
+	srcWords  words
+	wordCount int
+	// writtenWords words
 
 	srcBytes []byte
 	modBytes []byte
@@ -85,7 +86,7 @@ Time left: %.2fs
 Written: %d
 Rate: %.2f wpm`
 
-	fmt.Printf(topBarLayout, gs.secsLeft(), gs.writtenWords, 10.0)
+	fmt.Printf(topBarLayout, gs.secsLeft(), gs.wordCount, 10.0)
 
 	for range h/2 - 1 - strings.Count(topBarLayout, "\n") {
 		fmt.Println()
@@ -114,16 +115,18 @@ Rate: %.2f wpm`
 	fmt.Printf("%s", strings.Repeat(" ", padCount))
 	for i := range gs.modBytes[start:gs.pos] {
 		if gs.correctnessMap[start+i] == false {
+			if gs.modBytes[start+i] == ' ' {
+				gs.modBytes[start+i] = '_'
+			}
+
 			gs.colorPrints["red"].Printf("%s", string(gs.modBytes[start+i]))
 			continue
 		}
 		fmt.Printf("%s", string(gs.modBytes[start+i]))
 	}
 
-	// fmt.Printf("%s", gs.modBytes[start:gs.pos])
 	gs.colorPrints["blue"].Printf("%s", string(gs.modBytes[gs.pos]))
 	gs.colorPrints["grey"].Printf("%s\n", gs.modBytes[endStart:end])
-	// fmt.Printf("%s\n", gs.modBytes[start:end])
 	fmt.Printf("%s^\n", strings.Repeat(" ", w/2))
 	return nil
 }
@@ -155,6 +158,9 @@ func (gs *gameState) traverse(char rune, dir int) error {
 
 	if gs.modBytes[gs.pos] == gs.srcBytes[gs.pos] {
 		gs.correctnessMap[gs.pos] = true
+		if gs.srcBytes[gs.pos] == ' ' {
+			gs.wordCount++
+		}
 	}
 
 	gs.pos += dir
